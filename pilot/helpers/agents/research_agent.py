@@ -1,5 +1,5 @@
 from langchain.agents import Tool, ZeroShotAgent, AgentExecutor
-from langchain.tools import SerpAPIWrapper
+from langchain_community.utilities import SerpAPIWrapper
 from helpers.langchain_wrapper import LangChainLLMWrapper
 
 class ResearchAgent:
