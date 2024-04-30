@@ -16,6 +16,7 @@ from utils.style import (
     color_cyan_bold,
     color_white_bold
 )
+from .research_agent import ResearchAgent
 from helpers.exceptions import TokenLimitError
 from const.code_execution import MAX_COMMAND_DEBUG_TRIES
 from helpers.exceptions import TooDeepRecursionError
