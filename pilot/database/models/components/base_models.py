@@ -21,3 +21,10 @@ class BaseModel(Model):
 
     class Meta:
         database = database
+
+
+class RollbackHistory(BaseModel):
+    app = ForeignKeyField(App, on_delete='CASCADE')
+    step_id = UUIDField()
+    timestamp = DateTimeField(default=datetime.now)
+    step_data = JSONField()
