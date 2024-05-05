@@ -30,6 +30,7 @@ from helpers.Project import Project
 from utils.arguments import get_arguments
 from utils.exit import exit_gpt_pilot
 from logger.logger import logger
+from database.models.rollback_history import RollbackHistory
 from database.database import (
     database_exists,
     create_database,
