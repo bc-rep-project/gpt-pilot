@@ -11,6 +11,7 @@ if DATABASE_TYPE == "postgres":
 import os
 from const.common import PROMPT_DATA_TO_IGNORE, STEPS
 from logger.logger import logger
+from database.models.rollback_history import RollbackHistory
 from database.models.components.base_models import database
 from database.models.user import User
 from database.models.app import App
@@ -46,6 +47,7 @@ TABLES = [
             UserInputs,
             File,
             Feature,
+            RollbackHistory,
         ]
 
 
