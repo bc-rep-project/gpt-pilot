@@ -44,7 +44,7 @@ from utils.utils import remove_lines_with_string
 
 from utils.describe import describe_file
 from os.path import abspath, relpath
-from ..commands.command import Command
+from pilot.commands.command import Command
 
 class Project:
     def __init__(
