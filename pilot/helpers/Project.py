@@ -6,6 +6,10 @@ from typing import Tuple, Optional, Union
 import peewee
 from playhouse.shortcuts import model_to_dict
 
+from database.models.development_steps import DevelopmentSteps
+from database.database import save_development_step as db_save_development_step
+from .main import Command
+
 from const.messages import CHECK_AND_CONTINUE, AFFIRMATIVE_ANSWERS, NEGATIVE_ANSWERS, STUCK_IN_LOOP
 from utils.style import color_yellow_bold, color_cyan, color_white_bold, color_red_bold
 from const.common import STEPS
@@ -740,3 +744,137 @@ class Project:
                 # remove all lines that contain 'debugging_log'
                 file['content'] = remove_lines_with_string(file['content'], 'gpt_pilot_debugging_log')
                 self.save_file(file)
+
+    def __init__(self, *args, max_history_size=100, **kwargs):
+        # ... existing initialization logic ...
+        self.history = []  # List to store development steps for undo/redo
+        self.current_step = -1  # Pointer to the current step in the history
+        self.max_history_size = max_history_size  # Maximum size of the history
+
+    def save_development_step(self, step, parent_step=None):
+        """
+        Saves a development step and manages the undo/redo history.
+
+        Args:
+            step (dict): The development step data.
+            parent_step (DevelopmentSteps, optional): The parent step. Defaults to None. 
+        """
+
+        # Create a Command object for the development step
+        command = Command(
+            action=lambda: self.apply_step(step),  # Function to apply the step
+            undo_action=lambda: self.revert_step(step)  # Function to revert the step
+        )
+
+        # Execute the command and update history
+        self.command_history.execute_command(command) 
+
+        # Conflict resolution logic (using database models instead of in-memory list)
+        if parent_step and parent_step.id != self.history[self.current_step].id: 
+            raise Exception("Conflict detected!")
+
+        # Save the step to the database 
+        development_step = db_save_development_step(self, parent_step.id if parent_step else None, step) 
+
+        # Update the in-memory history for undo/redo 
+        self.history.append(development_step)
+        self.current_step += 1
+
+        # Limit the history size
+        if len(self.history) > self.max_history_size:
+            self.history.pop(0)
+            self.current_step -= 1
+
+    def get_previous_step(self):
+        """
+        Gets the previous development step in the history.
+
+        Returns:
+            DevelopmentSteps: The previous step, or None if at the beginning of history. 
+        """
+        if self.current_step > 0:
+            self.current_step -= 1
+            return self.history[self.current_step]
+        else:
+            return None
+
+    def get_next_step(self):
+        """
+        Gets the next development step in the history.
+
+        Returns:
+            DevelopmentSteps: The next step, or None if at the end of history.
+        """
+        if self.current_step < len(self.history) - 1:
+            self.current_step += 1
+            return self.history[self.current_step]
+        else:
+            return None
+
+    def get_step_action_data(self, step_id):
+        """
+        Retrieves the specific data needed to undo/redo a step.
+
+        Args:
+            step_id (int): The ID of the step.
+
+        Returns:
+            dict: The step data.
+        """
+        # Implement your database retrieval logic here
+        # For example, you might fetch the previous file content, command details, etc.
+        step_data = database.get_step_action_data(step_id)
+        return step_data
+
+    def undo_step(self):
+        """
+        Reverts the last development step in the history.
+        """
+        try:
+            if self.current_step >= 0:
+                step = self.history[self.current_step]
+                step_data = self.get_step_action_data(step.id)
+
+                # Handle dependencies (recursive calls to undo)
+                for dependency in step_data.get('dependencies', []):
+                    self.undo_step(dependency) 
+
+                if step_data['action_type'] == 'file_change':
+                    # Restore the previous file content
+                    update_file(step_data['file_path'], step_data['previous_content'], project=self) 
+                elif step_data['action_type'] == 'command':
+                    # Handle command undo (if applicable)
+                    if step_data['undo_command']:
+                        run_command_until_success(self, step_data['undo_command'])
+                    else:
+                        print(f"Undoing command: {step_data['command']}")  # Or log a message
+                elif step_data['action_type'] == 'human_intervention':
+                    # Provide a summary of the undone action
+                    print(f"Undoing human intervention: {step_data['description']}") 
+                else:
+                    raise UndoRedoError(f"Unsupported action type: {step_data['action_type']}") 
+
+                self.current_step -= 1
+        except KeyError as e:
+            print(f"Error undoing step: missing key {e}")
+        except UndoRedoError as e:
+            print(f"Error undoing step: {e}")
+
+    # def redo_step(self):
+    #     """
+    #     Reapplies the next development step in the history.
+    #     """
+    #     if self.current_step < len(self.history) - 1:
+    #         self.current_step += 1
+    #         step = self.history[self.current_step]
+    #         step_data = self.get_step_action_data(step.id)
+
+    #         if step_data['action_type'] == 'file_change':
+    #             # Reapply the file changes 
+    #             update_file(step_data['file_path'], step_data['new_content'], project=self) 
+    #         elif step_data['action_type'] == 'command':
+    #             # Re-execute the command
+    #             run_command_until_success(self, step_data['command']) 
+    #         elif step_data['action_type'] == 'human_intervention':
+    #             # Provide a summary of the redone action 
+    #             print(f"Redoing human intervention: {step_data['description']}")
