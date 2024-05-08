@@ -26,6 +26,7 @@ load_dotenv(override=True)
 
 from utils.style import color_red
 from utils.custom_print import get_custom_print
+# from commands.command import Command
 from helpers.Project import Project
 from utils.arguments import get_arguments
 from utils.exit import exit_gpt_pilot
@@ -176,37 +177,37 @@ if __name__ == "__main__":
         if run_exit_fn:
             exit_gpt_pilot(project, ask_feedback)
 
-class Command:
-    def __init__(self, action, undo_action):
-        self.action = action
-        self.undo_action = undo_action
+# class Command:
+#     def __init__(self, action, undo_action):
+#         self.action = action
+#         self.undo_action = undo_action
 
-class CLI:
-    def __init__(self):
-        self.history = []
-        self.redo_stack = []
+# class CLI:
+#     def __init__(self):
+#         self.history = []
+#         self.redo_stack = []
 
-    def execute_command(self, command):
-        self.history.append(command)
-        command.action()
-        self.redo_stack = []
+#     def execute_command(self, command):
+#         self.history.append(command)
+#         command.action()
+#         self.redo_stack = []
 
-    def undo(self):
-        if not self.history:
-            print("No actions to undo.")
-            return
-        last_command = self.history.pop()
-        last_command.undo_action()
-        self.redo_stack.append(last_command)
+#     def undo(self):
+#         if not self.history:
+#             print("No actions to undo.")
+#             return
+#         last_command = self.history.pop()
+#         last_command.undo_action()
+#         self.redo_stack.append(last_command)
 
-    def redo(self):
-        if not self.redo_stack:
-            print("No actions to redo.")
-            return
-        last_command = self.redo_stack.pop()
-        self.history.append(last_command)
-        last_command.action()
+#     def redo(self):
+#         if not self.redo_stack:
+#             print("No actions to redo.")
+#             return
+#         last_command = self.redo_stack.pop()
+#         self.history.append(last_command)
+#         last_command.action()
 
-    def list_history(self):
-        for i, command in enumerate(self.history):
-            print(f"{i+1}: {command.action.__name__}")
+#     def list_history(self):
+#         for i, command in enumerate(self.history):
+#             print(f"{i+1}: {command.action.__name__}")
