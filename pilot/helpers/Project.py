@@ -8,7 +8,8 @@ from playhouse.shortcuts import model_to_dict
 
 from database.models.development_steps import DevelopmentSteps
 from database.database import save_development_step as db_save_development_step
-from .main import Command
+from database.database import database
+from ..main import Command
 
 from const.messages import CHECK_AND_CONTINUE, AFFIRMATIVE_ANSWERS, NEGATIVE_ANSWERS, STUCK_IN_LOOP
 from utils.style import color_yellow_bold, color_cyan, color_white_bold, color_red_bold
@@ -21,6 +22,7 @@ from helpers.exceptions import TokenLimitError, GracefulExit
 from utils.questionary import styled_text
 from helpers.files import get_directory_contents, get_file_contents, clear_directory, update_file
 from helpers.cli import build_directory_tree
+from helpers.cli import run_command_until_success
 from helpers.agents.TechLead import TechLead
 from helpers.agents.Developer import Developer
 from helpers.agents.Architect import Architect
