@@ -21,6 +21,10 @@ class TokenLimitError(Exception):
         self.max_tokens = max_tokens
         super().__init__(f"Token limit error happened with {tokens_in_messages}/{max_tokens} tokens in messages!")
 
+class UndoRedoError(Exception):
+    """Exception raised for errors during undo/redo operations."""
+    pass
+
 
 class TooDeepRecursionError(Exception):
     def __init__(self, message='Recursion is too deep!'):

@@ -30,3 +30,11 @@ class DevelopmentSteps(BaseModel):
         indexes = (
             (('app', 'previous_step', 'high_level_step'), True),
         )
+
+    # parent_step = models.ForeignKey(
+    #     'self', 
+    #     on_delete=models.CASCADE, 
+    #     null=True, 
+    #     blank=True,
+    #     related_name='child_steps'  # Add related_name for easier reverse querying
+    # )
