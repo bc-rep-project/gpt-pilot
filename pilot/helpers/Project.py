@@ -9,6 +9,7 @@ from playhouse.shortcuts import model_to_dict
 from database.models.development_steps import DevelopmentSteps
 from database.database import save_development_step as db_save_development_step
 from database.database import database
+from ..helpers.exceptions import UndoRedoError
 
 
 from const.messages import CHECK_AND_CONTINUE, AFFIRMATIVE_ANSWERS, NEGATIVE_ANSWERS, STUCK_IN_LOOP
@@ -44,7 +45,7 @@ from utils.utils import remove_lines_with_string
 
 from utils.describe import describe_file
 from os.path import abspath, relpath
-from pilot.commands.command import Command
+from ..commands.command import Command
 
 class Project:
     def __init__(
