@@ -24,6 +24,7 @@ except ImportError:
 
 load_dotenv(override=True)
 
+from ui.gui import YourUI
 from utils.style import color_red
 from utils.custom_print import get_custom_print
 from helpers.Project import Project
@@ -175,3 +176,6 @@ if __name__ == "__main__":
             project.finish_loading(do_cleanup=False)
         if run_exit_fn:
             exit_gpt_pilot(project, ask_feedback)
+
+project = Project()  # Assuming you have your Project instance
+ui = YourUI(project)
