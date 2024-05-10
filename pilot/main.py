@@ -24,7 +24,7 @@ except ImportError:
 
 load_dotenv(override=True)
 
-# from ui.gui import YourUI
+from prompts.prompts import ask_user
 from utils.style import color_red
 from utils.custom_print import get_custom_print
 from helpers.Project import Project
@@ -54,6 +54,9 @@ def init():
         create_tables()
 
     arguments = get_arguments()
+
+    if 'name' not in arguments:
+        arguments['name'] = ask_user(None, "What is the name of your project?")
 
     logger.info('Starting with args: %s', arguments)
 

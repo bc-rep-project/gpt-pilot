@@ -71,8 +71,8 @@ class Project:
             current_step (str, optional): Current step in the project. Default is None.
         """
 
-        self.app_id = args.get('app_id', str(uuid.uuid4()))  # Use default if not provided
-        self.name = args['name']  # 'name' is required
+        self.app_id = args.get('app_id', str(uuid.uuid4()))
+        self.name = args.get('name')  # 'name' is now optional
         self.app_type = args.get('app_type', 'unknown')
 
         self.args = args
