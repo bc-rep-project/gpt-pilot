@@ -24,7 +24,7 @@ except ImportError:
 
 load_dotenv(override=True)
 
-from ui.gui import YourUI
+# from ui.gui import YourUI
 from utils.style import color_red
 from utils.custom_print import get_custom_print
 from helpers.Project import Project
@@ -66,6 +66,11 @@ if __name__ == "__main__":
     run_exit_fn = True
 
     args = init()
+
+    if args.get('undo'):
+        project.undo() 
+    elif args.get('redo'):
+        project.redo()
 
     try:
         # sys.argv.append('--ux-test=' + 'continue_development')
@@ -177,5 +182,5 @@ if __name__ == "__main__":
         if run_exit_fn:
             exit_gpt_pilot(project, ask_feedback)
 
-project = Project()  # Assuming you have your Project instance
-ui = YourUI(project)
+# project = Project()  # Assuming you have your Project instance
+# ui = YourUI(project)
