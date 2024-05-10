@@ -1,3 +1,4 @@
+# from peewee import *
 from peewee import ForeignKeyField, AutoField, TextField, IntegerField, CharField
 from database.config import DATABASE_TYPE
 from database.models.components.base_models import BaseModel
@@ -25,16 +26,37 @@ class DevelopmentSteps(BaseModel):
     previous_step = ForeignKeyField('self', null=True, column_name='previous_step')
     high_level_step = CharField(null=True)
 
+#--------------no.1-----
+
+    # parent_step = ForeignKeyField('self', backref='child_steps', null=True)
+    
+    # # (Optional) Add a field to store the type of action 
+    # # (file change, command, human intervention) for easier processing during undo/redo.
+    # action_type = CharField(null=True)
+
+#--------------no.2-----
+
+    parent_step = ForeignKeyField(
+        'self', 
+        null=True, 
+        backref='child_steps',
+        on_delete='CASCADE'  # Ensure child steps are deleted when parent is deleted 
+    )
+
+    # Additional fields for undo/redo
+    previous_file_content = TextField(null=True)  # Stores previous content for file changes
+    command_to_undo = TextField(null=True)  # Stores undo command (if applicable)
+
     class Meta:
-        table_name = 'development_steps'
+        database = db  # This is the database connection
+        
+        # (Optional) Add indexes for faster querying 
         indexes = (
-            (('app', 'previous_step', 'high_level_step'), True),
+            (('parent_step', 'action_type'), False), 
         )
 
-    # parent_step = models.ForeignKey(
-    #     'self', 
-    #     on_delete=models.CASCADE, 
-    #     null=True, 
-    #     blank=True,
-    #     related_name='child_steps'  # Add related_name for easier reverse querying
-    # )
+    # class Meta:
+    #     table_name = 'development_steps'
+    #     indexes = (
+    #         (('app', 'previous_step', 'high_level_step'), True),
+    #     )

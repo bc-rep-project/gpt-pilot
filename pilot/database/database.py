@@ -52,6 +52,27 @@ TABLES = [
 def get_created_apps():
     return [model_to_dict(app) for app in App.select().where((App.name.is_null(False)) & (App.status.is_null(False)))]
 
+def get_previous_step(step_id):
+    """
+    Retrieves the parent step of a given step ID.
+    """
+    step = DevelopmentSteps.get(DevelopmentSteps.id == step_id)
+    return step.parent_step
+
+def get_child_steps(step_id):
+    """
+    Retrieves all child steps of a given step ID.
+    """
+    step = DevelopmentSteps.get(DevelopmentSteps.id == step_id)
+    return step.child_steps
+
+def get_step_action_data(step_id):
+    """
+    Retrieves the specific data needed to undo/redo the step (e.g., previous file content, command details).
+    """
+    step = DevelopmentSteps.get(DevelopmentSteps.id == step_id)
+    # Assuming action_data is a field in DevelopmentSteps that stores the action data
+    return step.action_data
 
 def get_created_apps_with_steps():
     apps = get_created_apps()
