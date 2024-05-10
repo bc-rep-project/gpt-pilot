@@ -54,6 +54,7 @@ class Project:
         args,
         *,
         ipc_client_instance=None,
+        max_history_size=100,
     ):
         """
         Initialize a project.
@@ -68,6 +69,11 @@ class Project:
             development_plan (str, optional): Development plan. Default is None.
             current_step (str, optional): Current step in the project. Default is None.
         """
+
+        self.app_id = args.get('app_id', str(uuid.uuid4()))  # Use default if not provided
+        self.name = args['name']  # 'name' is required
+        self.app_type = args.get('app_type', 'unknown')
+
         self.args = args
         self.llm_req_num = 0
         self.command_runs_count = 0

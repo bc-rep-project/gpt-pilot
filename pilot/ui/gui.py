@@ -1,7 +1,15 @@
 import tkinter as tk
 from helpers.Project import Project
 
-project = Project()
+args = {
+    'app_id': 'your_app_id',
+    'name': 'your_project_name',
+    'app_type': 'web_app'
+}
+
+project = Project(args)
+
+# project = Project()
 
 def undo_action():
     project.undo()
