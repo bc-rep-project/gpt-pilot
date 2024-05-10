@@ -29,6 +29,7 @@ from database.models.user_inputs import UserInputs
 from database.models.files import File
 from database.models.feature import Feature
 from database.config import db
+from utils.style import color_red
 
 TABLES = [
             User,
@@ -420,6 +421,38 @@ def save_development_step(project, prompt_path, prompt_data, messages, llm_respo
     project.checkpoints['last_development_step'] = model_to_dict(development_step)
 
     project.save_files_snapshot(development_step.id)
+
+    try:
+        inserted_id = (DevelopmentSteps
+                       .insert(**unique_data, **data_fields)
+                       .execute())
+        record = DevelopmentSteps.get_by_id(inserted_id)
+        logger.debug(color_yellow(f"Saved Development Step with id {record.id}"))
+
+    except IntegrityError as e:
+        # Log the full error and traceback for debugging
+        logger.error(f"IntegrityError: {e}", exc_info=True)
+
+        # Check if the error is due to a unique constraint violation
+        if "UNIQUE constraint failed" in str(e):
+            # Attempt to retrieve the existing record
+            try:
+                existing_record = DevelopmentSteps.get(
+                    (DevelopmentSteps.app == unique_data['app']) & 
+                    (DevelopmentSteps.previous_step == unique_data['previous_step']) & 
+                    (DevelopmentSteps.high_level_step == unique_data['high_level_step'])
+                )
+
+            except DevelopmentSteps.DoesNotExist:
+                # Log the error if we couldn't find the record to overwrite
+                logger.error("Could not find existing record for unique data: %s", unique_data)
+                raise e  # Re-raise the original IntegrityError
+
+        else:
+            # For other types of IntegrityError, simply re-raise
+            raise e
+
+    return record
 
 
 def save_command_run(project, command, cli_response, done_or_error_response, exit_code):
