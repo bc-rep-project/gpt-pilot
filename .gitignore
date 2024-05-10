@@ -166,6 +166,9 @@ cython_debug/
 #sqlite
 /pilot/gpt-pilot
 
+#sqlite
+/pilot/gpt-pilot.db
+
 # workspace
 workspace
 pilot-env/
