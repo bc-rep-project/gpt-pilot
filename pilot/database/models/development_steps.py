@@ -5,6 +5,7 @@ from database.models.components.base_models import BaseModel
 from database.models.app import App
 from database.models.components.sqlite_middlewares import JSONField
 from playhouse.postgres_ext import BinaryJSONField
+from database.config import db
 
 
 class DevelopmentSteps(BaseModel):
@@ -13,6 +14,7 @@ class DevelopmentSteps(BaseModel):
     prompt_path = TextField(null=True)
     llm_req_num = IntegerField(null=True)
     token_limit_exception_raised = TextField(null=True)
+    action_type = CharField(max_length=255)
 
     if DATABASE_TYPE == 'postgres':
         messages = BinaryJSONField(null=True)

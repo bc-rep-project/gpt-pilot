@@ -28,6 +28,7 @@ from database.models.user_apps import UserApps
 from database.models.user_inputs import UserInputs
 from database.models.files import File
 from database.models.feature import Feature
+from database.config import db
 
 TABLES = [
             User,
@@ -58,6 +59,13 @@ def get_previous_step(step_id):
     """
     step = DevelopmentSteps.get(DevelopmentSteps.id == step_id)
     return step.parent_step
+
+def create_tables():
+    with db:
+        db.create_tables(TABLES)
+
+def database_exists():
+    return os.path.exists('gpt_pilot.db')  # Check if the database file exists 
 
 def get_child_steps(step_id):
     """
