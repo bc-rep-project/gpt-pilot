@@ -426,8 +426,10 @@ def save_development_step(project, prompt_path, prompt_data, messages, llm_respo
         inserted_id = (DevelopmentSteps
                        .insert(**unique_data, **data_fields)
                        .execute())
-        record = DevelopmentSteps.get_by_id(inserted_id)
-        logger.debug(color_yellow(f"Saved Development Step with id {record.id}"))
+        development_step = DevelopmentSteps.get_by_id(inserted_id)
+        logger.debug(color_yellow(f"Saved Development Step with id {development_step.id}"))
+        # record = DevelopmentSteps.get_by_id(inserted_id)
+        # logger.debug(color_yellow(f"Saved Development Step with id {record.id}"))
 
     except IntegrityError as e:
         # Log the full error and traceback for debugging
@@ -452,7 +454,13 @@ def save_development_step(project, prompt_path, prompt_data, messages, llm_respo
             # For other types of IntegrityError, simply re-raise
             raise e
 
-    return record
+    # Update last_development_step ONLY if a new step was inserted
+    if development_step is not None:
+        project.checkpoints['last_development_step'] = model_to_dict(development_step) 
+
+    project.save_files_snapshot(development_step.id)
+    return development_step
+    # return record
 
 
 def save_command_run(project, command, cli_response, done_or_error_response, exit_code):
