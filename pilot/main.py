@@ -73,14 +73,6 @@ if __name__ == "__main__":
 
     args = init()
 
-    project = Project(args, ipc_client_instance=ipc_client_instance) # Now project is defined after args
-
-    # Prompt for project name if not provided
-    if 'name' not in args:
-        args['name'] = ask_user(project, "What is the name of your project?")
-        project.name = args['name']
-
-
     if args.get('undo'):
         project.undo() 
     elif args.get('redo'):
@@ -140,6 +132,12 @@ if __name__ == "__main__":
 
             # TODO get checkpoint from database and fill the project with it
             project = Project(args, ipc_client_instance=ipc_client_instance)
+
+            # Prompt for project name if not provided
+            if 'name' not in args:
+                args['name'] = ask_user(project, "What is the name of your project?")
+                project.name = args['name']
+
             if project.check_ipc():
                 telemetry.set("is_extension", True)
 
