@@ -399,7 +399,7 @@ def hash_and_save_step(Model, app_id, unique_data_fields, data_fields, message):
     return record
 
 
-def save_development_step(project, prompt_path, prompt_data, messages, llm_response, exception=None):
+def save_development_step(project, prompt_path, prompt_data, messages, llm_response, exception=None, action_type=None):
     data_fields = {
         'messages': messages,
         'llm_response': llm_response,
