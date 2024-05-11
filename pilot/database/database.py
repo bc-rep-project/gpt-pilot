@@ -416,11 +416,11 @@ def save_development_step(project, prompt_path, prompt_data, messages, llm_respo
         'high_level_step': project.current_step,
     }
 
-    development_step = hash_and_save_step(DevelopmentSteps, project.args['app_id'], unique_data, data_fields,
-                                          "Saved Development Step")
-    project.checkpoints['last_development_step'] = model_to_dict(development_step)
+    # development_step = hash_and_save_step(DevelopmentSteps, project.args['app_id'], unique_data, data_fields,
+    #                                       "Saved Development Step")
+    # project.checkpoints['last_development_step'] = model_to_dict(development_step)
 
-    project.save_files_snapshot(development_step.id)
+    # project.save_files_snapshot(development_step.id)
 
     try:
         inserted_id = (DevelopmentSteps
