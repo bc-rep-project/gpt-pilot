@@ -68,12 +68,15 @@ class AgentConvo:
                                                   function_calls=function_calls, prompt_data=prompt_data,
                                                   temperature=self.temperature)
         except TokenLimitError as e:
-            save_development_step(self.agent.project, prompt_path, prompt_data, self.messages, {"text": ""}, str(e))
+            save_development_step(self.agent.project, prompt_path, prompt_data, self.messages, {"text": ""}, str(e),
+                                  action_type='token_limit_error')
             raise e
 
         # TODO: move this code to Developer agent - https://github.com/Pythagora-io/gpt-pilot/issues/91#issuecomment-1751964079
         if hasattr(self.agent, 'save_dev_steps') and self.agent.save_dev_steps:
-            save_development_step(self.agent.project, prompt_path, prompt_data, self.messages, response)
+            action_type = self.determine_action_type(prompt_path)
+            save_development_step(self.agent.project, prompt_path, prompt_data, self.messages, response,
+                                  action_type=action_type)
 
         # TODO handle errors from OpenAI
         # It's complicated because calling functions are expecting different types of responses - string or tuple
@@ -106,6 +109,59 @@ class AgentConvo:
         if self.agent.project.check_ipc():
             telemetry.output_project_stats()
         return response
+
+    def determine_action_type(self, prompt_path):
+        """
+        Determine the action_type based on the prompt_path or other context.
+
+        Args:
+            prompt_path (str): The path to the prompt file. 
+
+        Returns:
+            str: The action_type string.
+        """
+        if prompt_path is None:
+            return 'unknown'
+
+        # Example logic (you'll need to customize this based on your prompt naming conventions)
+        if 'implement_changes.prompt' in prompt_path:
+            return 'file_change'
+        elif 'ran_command.prompt' in prompt_path:
+            return 'command'
+        elif 'specs.prompt' in prompt_path:
+            return 'user_stories'
+        elif 'user_tasks.prompt' in prompt_path:
+            return 'user_tasks'
+        elif 'technologies.prompt' in prompt_path:
+            return 'architecture'
+        elif 'plan.prompt' in prompt_path:
+            return 'development_plan'
+        elif 'debug.prompt' in prompt_path:
+            return 'debugging'
+        elif 'feature_plan.prompt' in prompt_path:
+            return 'feature_plan'
+        elif 'feature_summary.prompt' in prompt_path:
+            return 'feature_summary'
+        elif 'define_user_review_goal.prompt' in prompt_path:
+            return 'user_review_goal'
+        elif 'iteration.prompt' in prompt_path:
+            return 'iteration'
+        elif 'get_run_command.prompt' in prompt_path:
+            return 'run_command'
+        elif 'step_check.prompt' in prompt_path:
+            return 'step_check'
+        elif 'next_step.prompt' in prompt_path:
+            return 'next_step'
+        elif 'breakdown.prompt' in prompt_path:
+            return 'breakdown'
+        elif 'get_alternative_solutions.prompt' in prompt_path:
+            return 'alternative_solutions'
+        elif 'update_plan.prompt' in prompt_path:
+            return 'update_plan'
+        elif 'create_readme.prompt' in prompt_path:
+            return 'create_readme'
+        else:
+            return 'unknown'  # Or a more appropriate default
 
     def format_message_content(self, response, function_calls):
         # TODO remove this once the database is set up properly
