@@ -55,8 +55,11 @@ def init():
 
     arguments = get_arguments()
 
-    if 'name' not in arguments:
-        arguments['name'] = ask_user(None, "What is the name of your project?")
+    project = Project(args, ipc_client_instance=ipc_client_instance)
+
+    if 'name' not in args:
+        args['name'] = ask_user(project, "What is the name of your project?")
+        project.name = args['name']
 
     logger.info('Starting with args: %s', arguments)
 
