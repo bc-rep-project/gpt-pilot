@@ -1,10 +1,17 @@
 import json
 import os
+import re
+import operator
+
 from pathlib import Path
 from typing import Tuple, Optional, Union
+from functools import reduce
 
 import peewee
 from playhouse.shortcuts import model_to_dict
+
+from const.common import STEPS, IGNORE_PATHS, IGNORE_SIZE_THRESHOLD
+from database.database import delete_unconnected_steps_from, delete_all_app_development_data, get_all_app_development_steps, delete_all_subsequent_steps, get_features_by_app_id, get_last_development_step
 
 from const.messages import CHECK_AND_CONTINUE, AFFIRMATIVE_ANSWERS, NEGATIVE_ANSWERS, STUCK_IN_LOOP
 from utils.style import color_yellow_bold, color_cyan, color_white_bold, color_red_bold
@@ -38,6 +45,19 @@ from utils.utils import remove_lines_with_string
 
 from utils.describe import describe_file
 from os.path import abspath, relpath
+
+from database.database import (
+    DevelopmentSteps,
+    File,
+    FileSnapshot,
+    get_all_app_development_steps,
+    get_app,
+)
+from database.models.command_runs import CommandRuns
+from database.models.user_inputs import UserInputs
+from helpers.exceptions import GracefulExit
+from prompts.prompts import ask_user
+from utils.style import color_red, color_yellow
 
 
 class Project:
@@ -232,6 +252,19 @@ class Project:
         Finish the project.
         """
         while True:
+            if self.check_ipc():
+                print('rollback/exit', type='button')
+                user_input = ask_user(self, 'Would you like to rollback to a previous step or exit?', require_some_input=False)
+            else:
+                user_input = ask_user(self, 'Would you like to rollback to a previous step? [yes/no]', require_some_input=False)
+
+            if user_input.lower() in ['yes', 'rollback']:
+                self.rollback()
+                print('Rollback completed.')
+            elif user_input.lower() in ['', 'no', 'exit']:
+                break
+
+        while True:
             feature_description = ''
             if not self.features_to_load:
                 self.finish_loading()
@@ -283,6 +316,122 @@ class Project:
             self.developer.start_coding('feature')
             print('', type='verbose', category='agent:tech-lead')
             self.tech_lead.create_feature_summary(feature_description)
+
+    def rollback(self):
+        """
+        Roll back changes made to the project.
+        """
+        self.finish_loading(False)
+        # rollback only to the start of coding, we can't rollback further
+        current_step_index = STEPS.index(self.current_step) if self.current_step in STEPS else -1
+        if current_step_index < STEPS.index('coding'):
+            print(color_red('Cannot rollback before coding step.'))
+            return
+
+        app = get_app(self.args['app_id'], error_if_not_found=False)
+        if app is None:
+            print(color_red('App not found.'))
+            return
+
+        steps = get_all_app_development_steps(app.id, loading_steps_only=True)
+
+        if len(steps) <= 1:
+            print(color_red('You are already at the first development step. Cannot rollback further.'))
+            return
+
+        # list of steps with names
+        step_names = [
+            {'id': step['id'], 'name': self._get_step_name(step)}
+            for step in steps[:-1]  # Exclude the last step from rollback options
+        ]
+
+        selected_step = ask_user(
+            self,
+            'Select a development step to rollback to:',
+            choices=step_names
+        )
+
+        if selected_step is None:
+            raise GracefulExit()
+
+        selected_step_id = selected_step['id']
+        self._delete_subsequent_steps_after(selected_step_id, app.id)
+        self.restore_files(selected_step_id)
+        self.checkpoints['last_development_step'] = get_last_development_step(app.id, last_step=selected_step_id)
+        print(color_yellow(f"Project restored to step: {selected_step['name']}"))
+
+    def _delete_subsequent_steps_after(self, step_id, app_id):
+        """
+        Delete all steps after the given step ID, for a specific App.
+
+        :param step_id: ID of the step
+        :param app_id: ID of the app
+        """
+        app = get_app(app_id)
+
+        # Delete all DevelopmentSteps after the given ID
+        DevelopmentSteps.delete().where(
+            (DevelopmentSteps.app == app) & (DevelopmentSteps.id > step_id)
+        ).execute()
+
+        # Delete all CommandRuns related to DevelopmentSteps after the given ID
+        subsequent_command_runs = CommandRuns.select().join(DevelopmentSteps, on=CommandRuns.high_level_step == DevelopmentSteps.id).where(
+            (DevelopmentSteps.app == app) & (DevelopmentSteps.id > step_id)
+        )
+
+        CommandRuns.delete().where(CommandRuns.id.in_(subsequent_command_runs)).execute()
+
+        # Delete all UserInputs related to DevelopmentSteps after the given ID
+        subsequent_user_inputs = UserInputs.select().join(DevelopmentSteps, on=UserInputs.high_level_step == DevelopmentSteps.id).where(
+            (DevelopmentSteps.app == app) & (DevelopmentSteps.id > step_id)
+        )
+
+        UserInputs.delete().where(UserInputs.id.in_(subsequent_user_inputs)).execute()
+
+        # Delete all FileSnapshot entries related to DevelopmentSteps after the given ID
+        FileSnapshot.delete().where(
+            FileSnapshot.development_step.in_(DevelopmentSteps.select(DevelopmentSteps.id).where(
+                (DevelopmentSteps.app == app) & (DevelopmentSteps.id > step_id)))
+        ).execute()
+
+    def _get_step_name(self, step):
+        if 'breakdown' in step['prompt_path']:
+            task_id = self._get_task_id_from_breakdown_prompt_path(step['prompt_path'])
+            return f"Task {task_id}"
+
+        elif 'iteration' in step['prompt_path']:
+            iteration_id = self._get_iteration_id_from_iteration_prompt_path(step['prompt_path'])
+            return f"Troubleshooting {iteration_id}"
+
+        elif 'feature_plan' in step['prompt_path']:
+            feature_id = self._get_feature_id_from_feature_plan_prompt_path(step['prompt_path'])
+            return f"Feature {feature_id}"
+
+        elif 'feature_summary' in step['prompt_path']:
+            feature_id = self._get_feature_id_from_feature_summary_prompt_path(step['prompt_path'])
+            return f"Feature {feature_id} end"
+
+        return f"Step {step['id']}"
+
+
+    def _get_task_id_from_breakdown_prompt_path(self, prompt_path):
+        match = re.search(r'task_(\d+)', prompt_path)
+        return int(match.group(1)) if match else None
+
+
+    def _get_iteration_id_from_iteration_prompt_path(self, prompt_path):
+        match = re.search(r'iteration_(\d+)', prompt_path)
+        return int(match.group(1)) if match else None
+
+
+    def _get_feature_id_from_feature_plan_prompt_path(self, prompt_path):
+        match = re.search(r'feature_(\d+)', prompt_path)
+        return int(match.group(1)) if match else None
+
+
+    def _get_feature_id_from_feature_summary_prompt_path(self, prompt_path):
+        match = re.search(r'feature_(\d+)', prompt_path)
+        return int(match.group(1)) if match else None
 
     def get_directory_tree(self, with_descriptions=False):
         """

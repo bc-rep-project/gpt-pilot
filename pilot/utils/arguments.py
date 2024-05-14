@@ -71,6 +71,11 @@ def get_arguments():
         print(color_green_bold(f'python {sys.argv[0]} app_id={arguments["app_id"]}'))
         print(color_green_bold('--------------------------------------------------------------\n'))
 
+    if '--rollback' in arguments:
+        arguments['rollback'] = True
+    else:
+        arguments['rollback'] = False
+
     if 'email' not in arguments:
         arguments['email'] = get_email()
 
