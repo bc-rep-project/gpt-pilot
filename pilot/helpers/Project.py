@@ -1,3 +1,11 @@
+import shutil
+from database.database import Checkpoint, FileSnapshot, get_all_app_development_steps, get_last_development_step, save_file_snapshot, delete_all_subsequent_steps
+from utils.style import color_yellow, color_red
+from logger.logger import logger
+from const.common import STEPS
+from utils.style import color_yellow
+from helpers.FileHandler import FileHandler
+
 import json
 import os
 from pathlib import Path
@@ -287,6 +295,156 @@ class Project:
             self.developer.start_coding('feature')
             print('', type='verbose', category='agent:tech-lead')
             self.tech_lead.create_feature_summary(feature_description)
+
+    def create_checkpoint(self, description: Optional[str] = None):
+        """
+        Create a checkpoint of the current project state.
+
+        Args:
+            description (Optional[str]): A brief description for the checkpoint.
+        """
+
+        logger.info(color_yellow(f"Creating a checkpoint{' - ' + description if description else ''}..."))
+
+        # 1. Save a file snapshot
+        self.save_files_snapshot()
+
+        # 2. Save a checkpoint entry to the database
+        self.save_checkpoint_to_database(description)
+
+        logger.info(color_yellow("Checkpoint created successfully."))
+
+    def save_checkpoint_to_database(self, description: Optional[str] = None):
+        """
+        Save a checkpoint record to the database. 
+
+        This function assumes you have a `Checkpoint` model in your database 
+        that can store information about the checkpoint, such as the timestamp,
+        a description, and a reference to the last development step.
+        """
+        last_step = get_last_development_step(self.args['app_id'])
+        Checkpoint.create(app=self.app, description=description, last_development_step=last_step.id)
+
+    def save_files_snapshot(self, development_step_id=None):
+        """Save snapshot of all project files to the database."""
+        if development_step_id is None:
+            development_step_id = self.checkpoints['last_development_step']['id']
+
+        file_handler = FileHandler(self)
+        all_files = file_handler.get_all_files(self.workspace)
+
+        for file in all_files:
+            relative_path = os.path.relpath(file, self.workspace)
+            file_content = file_handler.read_file(file)
+
+            save_file_snapshot(
+                self.app.id,
+                development_step_id,
+                relative_path,
+                file_content
+            )
+
+    def rollback(self, checkpoint_id=None, num_steps=None):
+        """
+        Rollback to a previous checkpoint.
+
+        Args:
+            checkpoint_id (str, optional): The ID of the checkpoint to rollback to.
+            num_steps (int, optional): The number of steps to rollback.
+        """
+
+        if checkpoint_id is not None and num_steps is not None:
+            print(color_red("Please provide either checkpoint_id or num_steps, not both."))
+            return
+
+        if checkpoint_id is not None:
+            checkpoint = self.get_checkpoint_by_id(checkpoint_id)
+        elif num_steps is not None:
+            checkpoint = self.get_checkpoint_by_steps(num_steps)
+        else:
+            print(color_red("Please provide either checkpoint_id or num_steps."))
+            return
+
+        if checkpoint is None:
+            return
+
+        # Confirm rollback
+        if not self.confirm_rollback(checkpoint):
+            return
+
+        # Restore the codebase
+        self.restore_codebase(checkpoint)
+
+        # Reset development step 
+        self.reset_development_step(checkpoint)
+
+        print(color_yellow(f"Rollback to checkpoint {checkpoint.id} successful!"))
+
+    def get_checkpoint_by_id(self, checkpoint_id):
+        """Retrieve a checkpoint by its ID."""
+        try:
+            checkpoint = Checkpoint.get(Checkpoint.id == checkpoint_id)
+            return checkpoint
+        except Checkpoint.DoesNotExist:
+            print(color_red(f"Checkpoint with ID {checkpoint_id} not found."))
+            return None
+
+    def get_checkpoint_by_steps(self, num_steps):
+        """Retrieve a checkpoint by going back a certain number of steps."""
+        last_step = get_last_development_step(self.app.id)
+        steps = get_all_app_development_steps(self.app.id, last_step=last_step.id)
+
+        if len(steps) <= num_steps:
+            print(color_red(f"Not enough steps to rollback {num_steps} times. "
+                            f"There are currently {len(steps)} steps available."))
+            return None
+
+        target_step = steps[num_steps]  # steps are ordered in reverse chronological order
+
+        try:
+            checkpoint = Checkpoint.get(Checkpoint.last_development_step == target_step.id)
+            return checkpoint
+        except Checkpoint.DoesNotExist:
+            print(color_red(f"No checkpoint found for step {target_step.id}."))
+            return None
+
+    def confirm_rollback(self, checkpoint):
+        """Confirm the rollback with the user."""
+        print(color_yellow(f"Rolling back to checkpoint {checkpoint.id} ({checkpoint.timestamp})"))
+        print(color_yellow(f"Description: {checkpoint.description or 'No description'}"))
+        
+        confirm = input("Are you sure you want to rollback? This will overwrite any changes since the checkpoint. (y/n): ")
+        return confirm.lower() == 'y'
+
+    def restore_codebase(self, checkpoint):
+        """Restore the codebase to the state saved in the checkpoint."""
+        for snapshot in FileSnapshot.select().where(FileSnapshot.development_step == checkpoint.last_development_step):
+            file_path = os.path.join(self.workspace, snapshot.file_path)
+
+            # Create the directory if it doesn't exist
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(snapshot.content)
+
+        # TODO: Remove files that didn't exist in the checkpoint
+
+    def reset_development_step(self, checkpoint):
+        """Reset the project state to the checkpoint."""
+
+        # 1. Delete all subsequent development steps
+        delete_all_subsequent_steps(self)
+
+        # 2. Set current_step to the one from the checkpoint
+        step_before_checkpoint = get_all_app_development_steps(self.app.id, last_step=checkpoint.last_development_step.id, loading_steps_only=True)
+        if step_before_checkpoint:
+            previous_high_level_step = step_before_checkpoint[0]['prompt_path'].split('/')[-1]
+            self.current_step = STEPS[STEPS.index(previous_high_level_step) + 1]
+        else:
+            self.current_step = 'project_description'
+
+        # 3. Update last_development_step in checkpoints
+        self.checkpoints['last_development_step'] = model_to_dict(checkpoint.last_development_step, recurse=False)
 
     def get_directory_tree(self, with_descriptions=False):
         """
