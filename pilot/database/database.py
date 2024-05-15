@@ -1,3 +1,4 @@
+from database.models.checkpoint import Checkpoint
 from playhouse.shortcuts import model_to_dict
 from utils.style import color_yellow, color_red
 from peewee import DoesNotExist, IntegrityError
@@ -46,8 +47,12 @@ TABLES = [
             UserInputs,
             File,
             Feature,
+            Checkpoint,
         ]
 
+def create_tables():
+    with database:
+        database.create_tables(TABLES)
 
 def get_created_apps():
     return [model_to_dict(app) for app in App.select().where((App.name.is_null(False)) & (App.status.is_null(False)))]

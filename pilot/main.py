@@ -54,6 +54,19 @@ def init():
 
     arguments = get_arguments()
 
+    # Handle checkpoint and rollback commands
+    if arguments.get('checkpoint'):
+        if arguments['checkpoint'] == 'create':
+            description = arguments.get('description')  # Get optional description
+            project.create_checkpoint(description)
+        elif arguments['checkpoint'] == 'list':
+            project.list_checkpoints()
+        # ... other checkpoint subcommands ... 
+    elif arguments.get('rollback'):
+        checkpoint_id = arguments.get('checkpoint_id')
+        num_steps = arguments.get('num_steps')
+        project.rollback(checkpoint_id, num_steps)
+
     logger.info('Starting with args: %s', arguments)
 
     return arguments
