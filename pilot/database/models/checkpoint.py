@@ -1,3 +1,4 @@
+from datetime import datetime
 from peewee import ForeignKeyField, DateTimeField, TextField
 from database.models.components.base_models import BaseModel
 from database.models.app import App

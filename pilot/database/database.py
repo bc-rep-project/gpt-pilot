@@ -1,3 +1,6 @@
+from database.models.file_snapshot import FileSnapshot
+from database.models.files import File
+
 from database.models.checkpoint import Checkpoint
 from playhouse.shortcuts import model_to_dict
 from utils.style import color_yellow, color_red
@@ -438,6 +441,27 @@ def save_user_input(project, query, user_input, hint):
     project.checkpoints['last_user_input'] = user_input
     return user_input
 
+def save_file_snapshot(app_id, development_step_id, file_path, file_content):
+    """
+    Saves a snapshot of a file to the database.
+    """
+    try:
+        file_record = File.get((File.app == app_id) & (File.path == file_path))
+    except File.DoesNotExist:
+        file_record = None
+        print(f'No File record found with path `{file_path}`')
+
+    (FileSnapshot
+        .insert(app=app_id,
+                development_step=development_step_id,
+                file=file_record,
+                content=file_content)
+        .on_conflict(
+            conflict_target=[FileSnapshot.app, FileSnapshot.development_step, FileSnapshot.file],
+            preserve=[],
+            update={'content': file_content}
+        )
+        .execute())
 
 def delete_all_subsequent_steps(project):
     app = get_app(project.args['app_id'])

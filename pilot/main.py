@@ -72,7 +72,7 @@ def init():
     return arguments
 
 
-if __name__ == "__main__":
+def main():
     ask_feedback = True
     project = None
     run_exit_fn = True
@@ -188,3 +188,6 @@ if __name__ == "__main__":
             project.finish_loading(do_cleanup=False)
         if run_exit_fn:
             exit_gpt_pilot(project, ask_feedback)
+
+if __name__ == "__main__":
+    main()

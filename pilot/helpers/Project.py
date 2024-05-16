@@ -1,3 +1,7 @@
+import os
+from datetime import datetime
+import traceback
+
 import shutil
 from database.database import Checkpoint, FileSnapshot, get_all_app_development_steps, get_last_development_step, save_file_snapshot, delete_all_subsequent_steps
 from utils.style import color_yellow, color_red
@@ -357,28 +361,33 @@ class Project:
             print(color_red("Please provide either checkpoint_id or num_steps, not both."))
             return
 
-        if checkpoint_id is not None:
-            checkpoint = self.get_checkpoint_by_id(checkpoint_id)
-        elif num_steps is not None:
-            checkpoint = self.get_checkpoint_by_steps(num_steps)
-        else:
-            print(color_red("Please provide either checkpoint_id or num_steps."))
-            return
+        try:
+            if checkpoint_id is not None:
+                checkpoint = self.get_checkpoint_by_id(checkpoint_id)
+            elif num_steps is not None:
+                checkpoint = self.get_checkpoint_by_steps(num_steps)
+            else:
+                print(color_red("Please provide either checkpoint_id or num_steps."))
+                return
 
-        if checkpoint is None:
-            return
+            if checkpoint is None:
+                return
 
-        # Confirm rollback
-        if not self.confirm_rollback(checkpoint):
-            return
+            # Confirm rollback
+            if not self.confirm_rollback(checkpoint):
+                return
 
-        # Restore the codebase
-        self.restore_codebase(checkpoint)
+            # Restore the codebase
+            self.restore_codebase(checkpoint)
 
-        # Reset development step 
-        self.reset_development_step(checkpoint)
+            # Reset development step 
+            self.reset_development_step(checkpoint)
 
-        print(color_yellow(f"Rollback to checkpoint {checkpoint.id} successful!"))
+            print(color_yellow(f"Rollback to checkpoint {checkpoint.id} successful!"))
+
+        except Exception as e:
+            print(color_red(f"Rollback failed: {e}"))
+            traceback.print_exc()
 
     def get_checkpoint_by_id(self, checkpoint_id):
         """Retrieve a checkpoint by its ID."""
@@ -418,33 +427,40 @@ class Project:
 
     def restore_codebase(self, checkpoint):
         """Restore the codebase to the state saved in the checkpoint."""
-        for snapshot in FileSnapshot.select().where(FileSnapshot.development_step == checkpoint.last_development_step):
-            file_path = os.path.join(self.workspace, snapshot.file_path)
+        try:
+            for snapshot in FileSnapshot.select().where(FileSnapshot.development_step == checkpoint.last_development_step):
+                file_path = os.path.join(self.workspace, snapshot.file_path)
 
-            # Create the directory if it doesn't exist
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                # Create the directory if it doesn't exist
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(snapshot.content)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(snapshot.content)
 
-        # TODO: Remove files that didn't exist in the checkpoint
+            # TODO: Remove files that didn't exist in the checkpoint
+        except Exception as e:
+            print(color_red(f"Error restoring codebase: {e}"))
+            raise # Re-raise the exception to stop the rollback process
 
     def reset_development_step(self, checkpoint):
         """Reset the project state to the checkpoint."""
+        try:
+            # 1. Delete all subsequent development steps
+            delete_all_subsequent_steps(self)
 
-        # 1. Delete all subsequent development steps
-        delete_all_subsequent_steps(self)
+            # 2. Set current_step to the one from the checkpoint
+            step_before_checkpoint = get_all_app_development_steps(self.app.id, last_step=checkpoint.last_development_step.id, loading_steps_only=True)
+            if step_before_checkpoint:
+                previous_high_level_step = step_before_checkpoint[0]['prompt_path'].split('/')[-1]
+                self.current_step = STEPS[STEPS.index(previous_high_level_step) + 1]
+            else:
+                self.current_step = 'project_description'
 
-        # 2. Set current_step to the one from the checkpoint
-        step_before_checkpoint = get_all_app_development_steps(self.app.id, last_step=checkpoint.last_development_step.id, loading_steps_only=True)
-        if step_before_checkpoint:
-            previous_high_level_step = step_before_checkpoint[0]['prompt_path'].split('/')[-1]
-            self.current_step = STEPS[STEPS.index(previous_high_level_step) + 1]
-        else:
-            self.current_step = 'project_description'
-
-        # 3. Update last_development_step in checkpoints
-        self.checkpoints['last_development_step'] = model_to_dict(checkpoint.last_development_step, recurse=False)
+            # 3. Update last_development_step in checkpoints
+            self.checkpoints['last_development_step'] = model_to_dict(checkpoint.last_development_step, recurse=False)
+        except Exception as e:
+            print(color_red(f"Error resetting development step: {e}"))
+            raise # Re-raise the exception
 
     def get_directory_tree(self, with_descriptions=False):
         """
