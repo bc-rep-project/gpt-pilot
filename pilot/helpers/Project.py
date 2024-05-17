@@ -348,6 +348,16 @@ class Project:
                 file_content
             )
 
+    def list_checkpoints(self):
+        """List all available checkpoints for the current project."""
+        checkpoints = Checkpoint.select().where(Checkpoint.app == self.app).order_by(Checkpoint.timestamp.desc())
+        if not checkpoints:
+            print(color_yellow("No checkpoints found for this project."))
+            return
+        print(color_yellow_bold("\nAvailable Checkpoints:"))
+        for checkpoint in checkpoints:
+            print(f"ID: {checkpoint.id}, Time: {checkpoint.timestamp}, Description: {checkpoint.description or 'No description'}")
+
     def rollback(self, checkpoint_id=None, num_steps=None):
         """
         Rollback to a previous checkpoint.
@@ -416,6 +426,17 @@ class Project:
         except Checkpoint.DoesNotExist:
             print(color_red(f"No checkpoint found for step {target_step.id}."))
             return None
+
+    def rollback_to_checkpoint(self, checkpoint):
+        """Rollback to a given checkpoint."""
+        if not self.confirm_rollback(checkpoint):
+            return
+
+        # Restore the codebase
+        self.restore_codebase(checkpoint)
+
+        # Reset development step
+        self.reset_development_step(checkpoint)
 
     def confirm_rollback(self, checkpoint):
         """Confirm the rollback with the user."""
