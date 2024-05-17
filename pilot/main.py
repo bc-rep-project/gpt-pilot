@@ -43,6 +43,9 @@ from utils.settings import settings, loader, get_version
 from utils.telemetry import telemetry
 from helpers.exceptions import ApiError, TokenLimitError, GracefulExit
 
+global stop_process
+stop_process = False
+
 def init():
     # Check if the "euclid" database exists, if not, create it
     if not database_exists():
@@ -53,6 +56,13 @@ def init():
         create_tables()
 
     arguments = get_arguments()
+
+    # Handle --stop argument
+    if arguments.get('--stop'):
+        global stop_process
+        stop_process = True
+        print(color_yellow_bold('Stopping GPT Pilot process...'))
+        return arguments
 
     # Handle checkpoint and rollback commands
     if arguments.get('checkpoint'):
@@ -66,6 +76,16 @@ def init():
         checkpoint_id = arguments.get('checkpoint_id')
         num_steps = arguments.get('num_steps')
         project.rollback(checkpoint_id, num_steps)
+
+    elif arguments.get('rollback_step'):
+        project = Project(arguments, ipc_client_instance=None)
+        if arguments['rollback_step'] == 'select':
+            project.choose_rollback_step()
+        elif arguments['rollback_step'] == 'last':
+            project.rollback_step()
+        else:
+            print(color_red(f"Invalid rollback_step argument: {arguments['rollback_step']}"))
+        sys.exit(0)  # Exit after rollback
 
     logger.info('Starting with args: %s', arguments)
 
