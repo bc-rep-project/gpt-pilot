@@ -299,7 +299,12 @@ def edit_feature_plan(app_id, update_data):
 def get_app(app_id, error_if_not_found=True):
     try:
         app = App.get(App.id == app_id)
-        return app
+        return {
+            'id': app.id,
+            'app_type': app.app_type,
+            'name': app.name,  # Make sure this is included
+            'status': app.status,
+        }
     except DoesNotExist:
         if error_if_not_found:
             raise ValueError(f"No app with id: {app_id}; use python main.py --get-created-apps-with-steps to see created apps")
