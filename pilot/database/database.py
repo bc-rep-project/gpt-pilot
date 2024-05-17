@@ -258,6 +258,8 @@ def save_progress(app_id, step, data):
     # If the record was not created, it already existed and we should update it
     if not created:
         for key, value in data.items():
+            if isinstance(value, (list, dict)):  # Convert lists and dictionaries to JSON strings
+                value = json.dumps(value)
             setattr(progress, key, value)
         progress.save()
 
