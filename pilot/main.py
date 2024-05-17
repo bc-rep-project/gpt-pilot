@@ -64,6 +64,10 @@ def init():
         print(color_yellow_bold('Stopping GPT Pilot process...'))
         return arguments
 
+    # Set up the project instance *before* handling rollback/checkpoint
+    # so project details are available for these actions
+    project = Project(arguments, ipc_client_instance=None)
+
     # Handle checkpoint and rollback commands
     if arguments.get('checkpoint'):
         if arguments['checkpoint'] == 'create':
@@ -89,7 +93,7 @@ def init():
 
     logger.info('Starting with args: %s', arguments)
 
-    return arguments
+    return arguments, project
 
 
 def main():
@@ -97,7 +101,7 @@ def main():
     project = None
     run_exit_fn = True
 
-    args = init()
+    args, project = init()
 
     try:
         # sys.argv.append('--ux-test=' + 'continue_development')
