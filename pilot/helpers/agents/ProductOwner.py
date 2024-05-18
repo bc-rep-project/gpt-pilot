@@ -93,9 +93,9 @@ class ProductOwner(Agent):
 
         data = {  # Define data here, outside the if block
             "prompt": self.project.main_prompt,
-            "messages": high_level_messages,
+            "messages": json.dumps(high_level_messages),  # Encode messages as JSON
             "summary": high_level_summary,
-            "app_data": generate_app_data(self.project.args)
+            "app_data": json.dumps(generate_app_data(self.project.args))  # Convert app_data to JSON string
         }
         print(f"Data being saved: {data}")
         
