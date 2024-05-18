@@ -99,12 +99,12 @@ class ProductOwner(Agent):
         }
         print(f"Data being saved: {data}")
         
-        save_progress(self.project.args['app_id'], self.project.current_step, data, {
-            "prompt": self.project.main_prompt,
-            "messages": high_level_messages,
-            "summary": high_level_summary,
-            "app_data": generate_app_data(self.project.args)
-        })
+        # save_progress(self.project.args['app_id'], self.project.current_step, data, {
+        #     "prompt": self.project.main_prompt,
+        #     "messages": high_level_messages,
+        #     "summary": high_level_summary,
+        #     "app_data": generate_app_data(self.project.args)
+        # })
 
         save_progress(self.project.args['app_id'], self.project.current_step, data)
 
