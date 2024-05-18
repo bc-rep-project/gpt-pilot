@@ -233,6 +233,23 @@ def save_user_app(user_id, app_id, workspace):
 
 
 def save_progress(app_id, step, data):
+
+    """
+    Saves the progress of a project to the database.
+
+    This function checks the type of each value in the `data` dictionary
+    before saving. If the value is a list or a dictionary, it's encoded
+    as a JSON string using `json.dumps` to ensure compatibility with SQLite.
+
+    Args:
+        app_id (str): The ID of the application.
+        step (str): The current step in the development process.
+        data (dict): A dictionary of data to save for the current step.
+
+    Returns:
+        peewee.Model: The saved progress record.
+    """
+
     progress_table_map = {
         'project_description': ProjectDescription,
         'user_stories': UserStories,

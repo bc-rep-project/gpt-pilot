@@ -91,11 +91,11 @@ class ProductOwner(Agent):
         high_level_messages = []
         high_level_summary = spec_writer.create_spec(self.project.main_prompt)
 
-        data = {  # Define data here, outside the if block
+        data = {
             "prompt": self.project.main_prompt,
-            "messages": json.dumps(high_level_messages),  # Encode messages as JSON
+            "messages": high_level_messages, # Remove json.dumps here!
             "summary": high_level_summary,
-            "app_data": json.dumps(generate_app_data(self.project.args))  # Convert app_data to JSON string
+            "app_data": json.dumps(generate_app_data(self.project.args))
         }
         print(f"Data being saved: {data}")
         
