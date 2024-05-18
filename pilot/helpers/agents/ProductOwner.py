@@ -91,13 +91,22 @@ class ProductOwner(Agent):
         high_level_messages = []
         high_level_summary = spec_writer.create_spec(self.project.main_prompt)
 
+        data = {  # Define data here, outside the if block
+            "prompt": self.project.main_prompt,
+            "messages": high_level_messages,
+            "summary": high_level_summary,
+            "app_data": generate_app_data(self.project.args)
+        }
         print(f"Data being saved: {data}")
-        save_progress(self.project.args['app_id'], self.project.current_step, {
+        
+        save_progress(self.project.args['app_id'], self.project.current_step, data, {
             "prompt": self.project.main_prompt,
             "messages": high_level_messages,
             "summary": high_level_summary,
             "app_data": generate_app_data(self.project.args)
         })
+
+        save_progress(self.project.args['app_id'], self.project.current_step, data)
 
         self.project.project_description = high_level_summary
         self.project.project_description_messages = high_level_messages
