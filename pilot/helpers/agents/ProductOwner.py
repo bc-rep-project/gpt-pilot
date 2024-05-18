@@ -95,7 +95,7 @@ class ProductOwner(Agent):
             "prompt": self.project.main_prompt,
             "messages": high_level_messages, # Remove json.dumps here!
             "summary": high_level_summary,
-            "app_data": json.dumps(generate_app_data(self.project.args))
+            "app_data": generate_app_data(self.project.args)
         }
         print(f"Data being saved: {data}")
         
