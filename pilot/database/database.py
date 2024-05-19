@@ -454,7 +454,7 @@ def save_file_snapshot(app_id, development_step_id, file_path, file_content):
     Saves a snapshot of a file to the database.
     """
     try:
-        file_record = File.get((File.app == app_id) & (File.path == file_path))
+        file_record = File.get((File.app == app_id) & (File.path == os.path.dirname(file_path)) & (File.name == os.path.basename(file_path)))
     except File.DoesNotExist:
         file_record = None
         print(f'No File record found with path `{file_path}`')
@@ -463,17 +463,18 @@ def save_file_snapshot(app_id, development_step_id, file_path, file_content):
         .insert(app=app_id,
                 development_step=development_step_id,
                 file=file_record,
+                file_path=file_path,  # Add this to store file path in the snapshot
                 content=file_content)
         .on_conflict(
-            conflict_target=[FileSnapshot.app, FileSnapshot.development_step, FileSnapshot.file],
+            conflict_target=[FileSnapshot.app, FileSnapshot.development_step, FileSnapshot.file_path],
             preserve=[],
             update={'content': file_content}
         )
         .execute())
 
-def delete_all_subsequent_steps(project):
+def delete_all_subsequent_steps(project, last_step = None):
     app = get_app(project.args['app_id'])
-    delete_subsequent_steps(DevelopmentSteps, app, project.checkpoints['last_development_step'])
+    delete_subsequent_steps(DevelopmentSteps, app, last_step or project.checkpoints['last_development_step'])
     # after implementation of backwards compatibility, we don't need to delete subsequent steps for CommandRuns and UserInputs
     # delete_subsequent_steps(CommandRuns, app, project.checkpoints['last_command_run'])
     # delete_subsequent_steps(UserInputs, app, project.checkpoints['last_user_input'])
@@ -509,6 +510,43 @@ def get_all_connected_steps(step, previous_step_field_name):
         prev_step = getattr(prev_step, previous_step_field_name)
     return connected_steps
 
+def delete_all_subsequent_steps(project, starting_step=None):
+    app = get_app(project.args['app_id'])
+    delete_subsequent_steps(DevelopmentSteps, app, starting_step if starting_step is not None else project.checkpoints['last_development_step'])
+    delete_subsequent_steps(CommandRuns, app, project.checkpoints['last_command_run'])
+    delete_subsequent_steps(UserInputs, app, project.checkpoints['last_user_input'])
+
+
+def delete_subsequent_steps(Model, app, step):
+    if step is None:
+        return
+    step_id = step.get('id') if isinstance(step, dict) else step.id
+    logger.info(color_red(f"Deleting subsequent {Model.__name__} steps after {step_id}"))
+
+    subsequent_steps = Model.select().where(
+        (Model.app == app) & (Model.previous_step == step_id))
+
+    for subsequent_step in subsequent_steps:
+        delete_subsequent_steps(Model, app, subsequent_step)
+        subsequent_step.delete_instance()
+        if Model == DevelopmentSteps:
+            FileSnapshot.delete().where(FileSnapshot.development_step == subsequent_step).execute()
+
+
+def delete_unconnected_steps_from(step, previous_step_field_name):
+    if step is None:
+        return
+    connected_steps = get_all_connected_steps(step, previous_step_field_name)
+    connected_step_ids = [s.id for s in connected_steps]
+
+    unconnected_steps = DevelopmentSteps.select().where(
+        (DevelopmentSteps.app == step.app) &
+        (DevelopmentSteps.id.not_in(connected_step_ids))
+    ).order_by(DevelopmentSteps.id.desc())
+
+    for unconnected_step in unconnected_steps:
+        print(color_red(f"Deleting unconnected {step.__class__.__name__} step {unconnected_step.id}"))
+        unconnected_step.delete_instance()
 
 def delete_all_app_development_data(app):
     models = [DevelopmentSteps, CommandRuns, UserInputs, UserApps, File, FileSnapshot]

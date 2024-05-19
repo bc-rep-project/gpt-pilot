@@ -14,6 +14,8 @@ from const.common import STEPS
 def get_arguments():
     # The first element in sys.argv is the name of the script itself.
     # Any additional elements are the arguments passed from the command line.
+    parser = argparse.ArgumentParser(description='GPT Pilot - an AI developer that works with you to build complex projects')
+
     args = sys.argv[1:]
 
     # Create an empty dictionary to store the key-value pairs.
@@ -65,7 +67,7 @@ def get_arguments():
         print(color_green_bold(f'{app.name} (app_id={arguments["app_id"]})'))
         print(color_green_bold('--------------------------------------------------------------\n'))
 
-    elif '--get-created-apps-with-steps' not in args and '--version' not in args and not any(arg.startswith('--delete-app') for arg in args):
+    elif '--get-created-apps-with-steps' not in args and '--version' not in args and not any(arg.startswith('--delete-app') for arg in args) and '--rollback' not in args:
         arguments['app_id'] = str(uuid.uuid4())
         print(color_green_bold('\n------------------ STARTING NEW PROJECT ----------------------'))
         print("If you wish to continue with this project in future run:")

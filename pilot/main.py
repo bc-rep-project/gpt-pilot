@@ -57,44 +57,15 @@ def init():
 
     arguments = get_arguments()
 
-    # Handle --stop argument
-    if arguments.get('--stop'):
-        global stop_process
-        stop_process = True
-        print(color_yellow_bold('Stopping GPT Pilot process...'))
-        return arguments
-
-    # Set up the project instance *before* handling rollback/checkpoint
-    # so project details are available for these actions
-    project = Project(arguments, ipc_client_instance=None)
-
-    # Handle checkpoint and rollback commands
-    if arguments.get('checkpoint'):
-        if arguments['checkpoint'] == 'create':
-            description = arguments.get('description')  # Get optional description
-            project.create_checkpoint(description)
-        elif arguments['checkpoint'] == 'list':
-            project.list_checkpoints()
-        # ... other checkpoint subcommands ... 
-    elif arguments.get('rollback'):
-        checkpoint_id = arguments.get('checkpoint_id')
-        num_steps = arguments.get('num_steps')
-        project.rollback(checkpoint_id, num_steps)
-
-    elif arguments.get('rollback_step'):
-        project = Project(arguments, ipc_client_instance=None)
-        if arguments['rollback_step'] == 'select':
-            project.choose_rollback_step()
-        elif arguments['rollback_step'] == 'last':
-            project.rollback_step()
-        else:
-            print(color_red(f"Invalid rollback_step argument: {arguments['rollback_step']}"))
-        sys.exit(0)  # Exit after rollback
-
     logger.info('Starting with args: %s', arguments)
 
-    return arguments, project
+    return arguments
 
+def handle_rollback(args):
+    """Handle the rollback process."""
+    project = Project(args, ipc_client_instance=None)  # Pass ipc_client_instance=None here
+    rollback_agent = create_rollback_agent(project)
+    rollback_agent.rollback()
 
 def main():
     ask_feedback = True
@@ -141,6 +112,11 @@ def main():
             from test.ux_tests import run_test
             run_test(args['--ux-test'], args)
             run_exit_fn = False
+
+        elif '--rollback' in args:
+            handle_rollback(args)
+            exit_gpt_pilot(None, ask_feedback=False)
+            
         else:
             if settings.telemetry is None:
                 telemetry.setup()

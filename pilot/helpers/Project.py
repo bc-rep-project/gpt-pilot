@@ -889,6 +889,36 @@ class Project:
             except (ValueError, IndexError):
                 print(color_red("Invalid choice. Please enter a valid step number."))
 
+    def rollback_to_step(self, step_id):
+        """Rollback project to the specified step."""
+        # Get the DevelopmentSteps object for the specified step ID
+        try:
+            step = DevelopmentSteps.get(DevelopmentSteps.id == step_id)
+        except DevelopmentSteps.DoesNotExist:
+            print(color_red_bold(f"No development step with id {step_id} found."))
+            return
+
+        # Ask the user for confirmation before rolling back
+        # Check for IPC mode before asking for confirmation
+        if not self.check_ipc():
+            print(color_yellow_bold(f'Are you sure you want to roll back to step {step_id}? This will overwrite all changes made after this step.'))
+            print('yes/no', type='buttons-only')
+            answer = ask_user(self, 'Type yes/no')
+            if answer.lower() not in AFFIRMATIVE_ANSWERS:
+                print(color_green_bold("Rollback cancelled."))
+                return
+
+        # Delete all subsequent steps and their associated data
+        self.delete_all_steps_except_current_branch()  # Use the existing method
+
+        # Restore the files to the state they were in at the specified step
+        self.restore_files(step_id)
+
+        # Update the last development step checkpoint to the specified step
+        self.checkpoints['last_development_step'] = model_to_dict(step)
+
+        print(color_green_bold(f"Project successfully rolled back to step {step_id}."))
+
     def delete_all_steps_except_current_branch(self):
         delete_unconnected_steps_from(self.checkpoints['last_development_step'], 'previous_step')
         delete_unconnected_steps_from(self.checkpoints['last_command_run'], 'previous_step')
@@ -990,3 +1020,43 @@ class Project:
                 # remove all lines that contain 'debugging_log'
                 file['content'] = remove_lines_with_string(file['content'], 'gpt_pilot_debugging_log')
                 self.save_file(file)
+
+
+def create_rollback_agent(project):
+    """Create a simple rollback agent to handle user input."""
+    from pilot.helpers.Agent import Agent
+    from pilot.helpers.AgentConvo import AgentConvo
+    from pilot.utils.style import color_yellow_bold, color_green_bold, color_red_bold
+    from pilot.prompts.prompts import ask_user
+
+    class RollbackAgent(Agent):
+        def __init__(self, project):
+            super().__init__('rollback_agent', project)
+            self.convo = AgentConvo(self)
+
+        def ask_for_step_id(self):
+            """Ask the user for the step ID to roll back to."""
+            print(color_yellow_bold("Available Development Steps:\n"))
+            for step in project.dev_steps_to_load:
+                print(f"  - Step ID: {step['id']} (Prompt Path: {step['prompt_path']})")
+            print("\n")
+
+            while True:
+                step_id = ask_user(project, "Enter the step ID to roll back to:")
+                try:
+                    step_id = int(step_id)
+                    # Check if the step ID exists
+                    if any(step['id'] == step_id for step in project.dev_steps_to_load):
+                        return step_id
+                    else:
+                        print(color_red_bold(f"Invalid step ID: {step_id}"))
+                except ValueError:
+                    print(color_red_bold("Invalid input. Please enter a valid number."))
+
+        def rollback(self):
+            """Handle the rollback process."""
+            step_id = self.ask_for_step_id()
+            project.rollback_to_step(step_id)
+            print(color_green_bold("Rollback complete."))
+
+    return RollbackAgent(project)
