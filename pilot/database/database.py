@@ -345,6 +345,8 @@ def get_progress_steps(app_id, step=None):
             progress = ProgressTable.get(ProgressTable.app_id == app_id)
             if progress.app_data:
                 progress.app_data = json.loads(progress.app_data)
+            if progress.architecture:
+                progress.architecture = json.loads(progress.architecture)
             return model_to_dict(progress)
         except DoesNotExist:
             return None
@@ -353,7 +355,14 @@ def get_progress_steps(app_id, step=None):
         for step, ProgressTable in progress_table_map.items():
             try:
                 progress = ProgressTable.get(ProgressTable.app_id == app_id)
-                progress.app_data = json.loads(progress.app_data)
+                if progress.app_data:
+                    progress.app_data = json.loads(progress.app_data)
+                # Deserialize messages from JSON string if present
+                if progress.messages:
+                    progress.messages = json.loads(progress.messages)
+                # Deserialize architecture from JSON string if present
+                if progress.architecture:
+                    progress.architecture = json.loads(progress.architecture)
                 steps[step] = model_to_dict(progress)
             except DoesNotExist:
                 steps[step] = None
