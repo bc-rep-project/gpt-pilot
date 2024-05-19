@@ -53,7 +53,7 @@ class ProductOwner(Agent):
                 question = 'What is the project name?'
                 print(question, type='ipc')
                 print('continue/start an example project', type='button')
-                project_name = ask_user(self.project, question)
+                project_name = ask_user(self.project, question, save_input=False)
                 if project_name is not None and project_name.lower() == 'continue':
                     continue
                 if len(project_name) <= MAX_PROJECT_NAME_LENGTH:
@@ -67,9 +67,9 @@ class ProductOwner(Agent):
 
             self.project.args['name'] = clean_filename(project_name)
 
-        self.project.app = save_app(self.project)
+            self.project.app = save_app(self.project)
 
-        self.project.set_root_path(setup_workspace(self.project.args))
+            self.project.set_root_path(setup_workspace(self.project.args))
 
         if self.is_example_project:
             print(EXAMPLE_PROJECT_DESCRIPTION)
@@ -101,7 +101,8 @@ class ProductOwner(Agent):
         })
 
         
-        self.project.project_description_messages = json.loads(high_level_messages_json) if high_level_messages_json else []
+        self.project.project_description_messages = json.loads(
+            high_level_messages_json) if high_level_messages_json else []
         
         self.project.project_description = high_level_summary
         return

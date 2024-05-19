@@ -13,7 +13,7 @@ def styled_select(*args, **kwargs):
     return questionary.select(*args, **kwargs).unsafe_ask()  # .ask() is included here
 
 
-def styled_text(project, question, ignore_user_input_count=False, style=None, hint=None):
+def styled_text(project, question, ignore_user_input_count=False, style=None, hint=None, save_input=True):
     """
     Ask the user a question and return the answer.
 
@@ -31,15 +31,19 @@ def styled_text(project, question, ignore_user_input_count=False, style=None, hi
         flush_input()
         response = questionary.text(question, style=used_style).unsafe_ask()  # .ask() is included here
 
-    if not ignore_user_input_count:
-        save_user_input(project, question, response, hint)
+    # if not ignore_user_input_count:
+    #     save_user_input(project, question, response, hint)
+
+    if save_input:
+        if not ignore_user_input_count:
+            save_user_input(project, question, response, hint)
 
     if project is not None and not project.check_ipc():
         print('\n\n', end='')
 
-    if not ignore_user_input_count:
-        save_user_input(project, question, response, hint)
-        UserInputHistory.create(app=project.app, input=response)
+    # if not ignore_user_input_count:
+    #     save_user_input(project, question, response, hint)
+    #     UserInputHistory.create(app=project.app, input=response)
 
     return response
 

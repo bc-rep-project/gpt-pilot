@@ -52,12 +52,12 @@ def ask_for_main_app_definition(project):
     return description
 
 
-def ask_user(project, question: str, require_some_input=True, hint: str = None, ignore_user_input_count: bool = False):
+def ask_user(project, question: str, require_some_input=True, hint: str = None, ignore_user_input_count: bool = False, save_input: bool = True):
     while True:
         if hint is not None:
             print(color_white_bold(hint) + '\n')
         project.finish_loading()
-        answer = styled_text(project, question, hint=hint, ignore_user_input_count=ignore_user_input_count)
+        answer = styled_text(project, question, hint=hint, ignore_user_input_count=ignore_user_input_count, save_input=save_input)
 
         logger.info('Q: %s', question)
         logger.info('A: %s', answer)
