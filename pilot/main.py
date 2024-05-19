@@ -72,7 +72,7 @@ def main():
     project = None
     run_exit_fn = True
 
-    args, project = init()
+    args = init()
 
     try:
         # sys.argv.append('--ux-test=' + 'continue_development')

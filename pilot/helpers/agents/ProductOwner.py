@@ -46,7 +46,7 @@ class ProductOwner(Agent):
         if 'app_type' not in self.project.args:
             self.project.args['app_type'] = ask_for_app_type()
 
-        self.project.app = save_app(self.project)
+        # self.project.app = save_app(self.project)
 
         if 'name' not in self.project.args:
             while True:
@@ -67,7 +67,7 @@ class ProductOwner(Agent):
 
             self.project.args['name'] = clean_filename(project_name)
 
-        # self.project.app = save_app(self.project)
+        self.project.app = save_app(self.project)
 
         self.project.set_root_path(setup_workspace(self.project.args))
 
@@ -91,15 +91,19 @@ class ProductOwner(Agent):
         high_level_messages = []
         high_level_summary = spec_writer.create_spec(self.project.main_prompt)
 
+        high_level_messages_json = json.dumps(high_level_messages) if high_level_messages else None
+
         save_progress(self.project.args['app_id'], self.project.current_step, {
             "prompt": self.project.main_prompt,
-            "messages": high_level_messages,
+            "messages": high_level_messages_json,  # Save the JSON string
             "summary": high_level_summary,
             "app_data": generate_app_data(self.project.args)
         })
 
+        
+        self.project.project_description_messages = json.loads(high_level_messages_json) if high_level_messages_json else []
+        
         self.project.project_description = high_level_summary
-        self.project.project_description_messages = high_level_messages
         return
         # PROJECT DESCRIPTION END
 

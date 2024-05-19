@@ -14,6 +14,7 @@ if DATABASE_TYPE == "postgres":
     from psycopg2.extensions import quote_ident
 
 import os
+import json
 from const.common import PROMPT_DATA_TO_IGNORE, STEPS
 from logger.logger import logger
 from database.models.components.base_models import database
@@ -243,7 +244,12 @@ def save_progress(app_id, step, data):
         'development': Development,
     }
 
+    if 'messages' in data:
+        data['messages'] = json.dumps(data['messages'])
+
     data['step'] = step
+
+    data['app_data'] = json.dumps(data['app_data'])
 
     ProgressTable = progress_table_map.get(step)
     if not ProgressTable:
@@ -337,6 +343,7 @@ def get_progress_steps(app_id, step=None):
 
         try:
             progress = ProgressTable.get(ProgressTable.app_id == app_id)
+            progress.app_data = json.loads(progress.app_data)
             return model_to_dict(progress)
         except DoesNotExist:
             return None
@@ -345,6 +352,7 @@ def get_progress_steps(app_id, step=None):
         for step, ProgressTable in progress_table_map.items():
             try:
                 progress = ProgressTable.get(ProgressTable.app_id == app_id)
+                progress.app_data = json.loads(progress.app_data)
                 steps[step] = model_to_dict(progress)
             except DoesNotExist:
                 steps[step] = None
