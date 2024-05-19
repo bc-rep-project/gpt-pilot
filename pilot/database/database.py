@@ -343,7 +343,8 @@ def get_progress_steps(app_id, step=None):
 
         try:
             progress = ProgressTable.get(ProgressTable.app_id == app_id)
-            progress.app_data = json.loads(progress.app_data)
+            if progress.app_data:
+                progress.app_data = json.loads(progress.app_data)
             return model_to_dict(progress)
         except DoesNotExist:
             return None
