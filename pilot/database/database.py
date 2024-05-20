@@ -244,6 +244,12 @@ def save_progress(app_id, step, data):
         'development': Development,
     }
 
+    if 'system_dependencies' in data:
+        data['system_dependencies'] = json.dumps(data['system_dependencies'])
+
+    if 'app_data' in data:
+        data['app_data'] = json.dumps(data['app_data'])
+
     if 'messages' in data:
         data['messages'] = json.dumps(data['messages'])
 
@@ -343,10 +349,18 @@ def get_progress_steps(app_id, step=None):
 
         try:
             progress = ProgressTable.get(ProgressTable.app_id == app_id)
+            # Deserialize app_data from JSON string
             if progress.app_data:
                 progress.app_data = json.loads(progress.app_data)
+            # Deserialize messages from JSON string if present
+            if progress.messages:
+                progress.messages = json.loads(progress.messages)
+            # Deserialize architecture from JSON string if present
             if progress.architecture:
                 progress.architecture = json.loads(progress.architecture)
+            # Deserialize system_dependencies from JSON string if present
+            if progress.system_dependencies:
+                progress.system_dependencies = json.loads(progress.system_dependencies)
             return model_to_dict(progress)
         except DoesNotExist:
             return None
@@ -355,6 +369,7 @@ def get_progress_steps(app_id, step=None):
         for step, ProgressTable in progress_table_map.items():
             try:
                 progress = ProgressTable.get(ProgressTable.app_id == app_id)
+                # Deserialize app_data from JSON string
                 if progress.app_data:
                     progress.app_data = json.loads(progress.app_data)
                 # Deserialize messages from JSON string if present
@@ -363,6 +378,9 @@ def get_progress_steps(app_id, step=None):
                 # Deserialize architecture from JSON string if present
                 if progress.architecture:
                     progress.architecture = json.loads(progress.architecture)
+                # Deserialize system_dependencies from JSON string if present
+                if progress.system_dependencies:
+                    progress.system_dependencies = json.loads(progress.system_dependencies)
                 steps[step] = model_to_dict(progress)
             except DoesNotExist:
                 steps[step] = None
