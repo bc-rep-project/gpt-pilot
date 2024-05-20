@@ -256,6 +256,9 @@ def save_progress(app_id, step, data):
     if 'user_stories' in data:
         data['user_stories'] = json.dumps(data['user_stories'])
 
+    if 'summary' in data:
+        data['summary'] = json.dumps(data['summary'])
+
     data['step'] = step
 
     data['app_data'] = json.dumps(data['app_data'])
@@ -371,6 +374,8 @@ def get_progress_steps(app_id, step=None):
             # Deserialize user_stories from JSON string if present
             if progress.user_stories:
                 progress.user_stories = json.loads(progress.user_stories)
+            if progress.summary:
+                progress.summary = json.loads(progress.summary)
             return model_to_dict(progress)
         except DoesNotExist:
             return None
@@ -394,6 +399,8 @@ def get_progress_steps(app_id, step=None):
                 # Deserialize user_stories from JSON string if present
                 if progress.user_stories:
                     progress.user_stories = json.loads(progress.user_stories)
+                if progress.summary:
+                    progress.summary = json.loads(progress.summary)
 
                 steps[step] = model_to_dict(progress)
             except DoesNotExist:
