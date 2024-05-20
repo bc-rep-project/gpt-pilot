@@ -95,7 +95,7 @@ class ProductOwner(Agent):
 
         save_progress(self.project.args['app_id'], self.project.current_step, {
             "prompt": self.project.main_prompt,
-            "messages": high_level_messages_json,  # Save the JSON string
+            "messages": json.dumps(high_level_messages),  # Save the JSON string
             "summary": high_level_summary,
             "app_data": generate_app_data(self.project.args)
         })
@@ -123,7 +123,7 @@ class ProductOwner(Agent):
         step = get_progress_steps(self.project.args['app_id'], USER_STORIES_STEP)
         if step and not should_execute_step(self.project.args['step'], USER_STORIES_STEP):
             step_already_finished(self.project.args, step)
-            self.convo_user_stories.messages = step['messages']
+            self.convo_user_stories.messages = json.loads(step['messages']) # Deserialize messages here
             self.project.user_stories = step['user_stories']
             return
 

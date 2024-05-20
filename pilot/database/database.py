@@ -253,9 +253,16 @@ def save_progress(app_id, step, data):
     if 'messages' in data:
         data['messages'] = json.dumps(data['messages'])
 
+    if 'user_stories' in data:
+        data['user_stories'] = json.dumps(data['user_stories'])
+
     data['step'] = step
 
     data['app_data'] = json.dumps(data['app_data'])
+
+    for key, value in data.items():
+        if isinstance(value, (list, dict)):
+            data[key] = json.dumps(value)
 
     ProgressTable = progress_table_map.get(step)
     if not ProgressTable:
@@ -361,6 +368,9 @@ def get_progress_steps(app_id, step=None):
             # Deserialize system_dependencies from JSON string if present
             if progress.system_dependencies:
                 progress.system_dependencies = json.loads(progress.system_dependencies)
+            # Deserialize user_stories from JSON string if present
+            if progress.user_stories:
+                progress.user_stories = json.loads(progress.user_stories)
             return model_to_dict(progress)
         except DoesNotExist:
             return None
@@ -381,6 +391,10 @@ def get_progress_steps(app_id, step=None):
                 # Deserialize system_dependencies from JSON string if present
                 if progress.system_dependencies:
                     progress.system_dependencies = json.loads(progress.system_dependencies)
+                # Deserialize user_stories from JSON string if present
+                if progress.user_stories:
+                    progress.user_stories = json.loads(progress.user_stories)
+
                 steps[step] = model_to_dict(progress)
             except DoesNotExist:
                 steps[step] = None
