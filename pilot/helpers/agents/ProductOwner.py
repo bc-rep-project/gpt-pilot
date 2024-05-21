@@ -96,8 +96,8 @@ class ProductOwner(Agent):
         save_progress(self.project.args['app_id'], self.project.current_step, {
             "prompt": self.project.main_prompt,
             "messages": json.dumps(high_level_messages),  # Save the JSON string
-            "summary": high_level_summary,
-            "app_data": generate_app_data(self.project.args)
+            "summary": json.dumps(high_level_summary), 
+            "app_data": generate_app_data(json.dumps(self.project.args))
         })
 
         

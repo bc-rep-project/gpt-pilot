@@ -146,10 +146,12 @@ def step_already_finished(args, step):
     logger.info(message)
 
 
-def generate_app_data(args):
+def generate_app_data(serialized_args):
+    args = json.loads(serialized_args)  # Deserialize the args
+
     app_data = {'app_id': args['app_id'], 'app_type': args['app_type']}
     
-    # Serialize technologies if present
+    # Serialize technologies if present (no change here)
     if 'technologies' in args:
         app_data['technologies'] = json.dumps(args['technologies']) 
 
