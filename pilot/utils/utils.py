@@ -147,7 +147,13 @@ def step_already_finished(args, step):
 
 
 def generate_app_data(args):
-    return {'app_id': args['app_id'], 'app_type': args['app_type']}
+    app_data = {'app_id': args['app_id'], 'app_type': args['app_type']}
+    
+    # Serialize technologies if present
+    if 'technologies' in args:
+        app_data['technologies'] = json.dumps(args['technologies']) 
+
+    return app_data
 
 
 def array_of_objects_to_string(array):
