@@ -107,6 +107,8 @@ class Architect(Agent):
 
         logger.info(f"Final architecture: {self.project.architecture}")
 
+        llm_response['technologies'] = json.dumps(llm_response['technologies'])
+
         save_progress(self.project.args['app_id'], self.project.current_step, {
             "messages": self.convo_architecture.messages,
             "architecture": llm_response,
